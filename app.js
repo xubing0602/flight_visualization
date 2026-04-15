@@ -147,7 +147,7 @@ function getAirlineColor(airline) {
 // ---- Parse CSV ----
 function parseCSV(text) {
   const rows = d3.csvParse(text);
-  return rows.map(row => {
+  const flights = rows.map(row => {
     const dep = AIRPORT_COORDS[row.departure_airport];
     const arr = AIRPORT_COORDS[row.arrival_city];
     if (!dep || !arr) {
@@ -174,6 +174,17 @@ function parseCSV(text) {
       color: getAirlineColor(row.airlines),
     };
   }).filter(Boolean);
+
+  // Assign route index for duplicate routes so arcs fan out at different altitudes
+  const routeCounts = new Map();
+  flights.forEach(f => {
+    const routeKey = [f.depCode, f.arrCode].sort().join('-');
+    const idx = routeCounts.get(routeKey) || 0;
+    f.routeIndex = idx;
+    routeCounts.set(routeKey, idx + 1);
+  });
+
+  return flights;
 }
 
 // ---- Build points from flights ----
@@ -186,7 +197,7 @@ function buildPoints(flights) {
       { key: f.arrCode, lat: f.endLat, lng: f.endLng, city: f.arrCity, name: f.arrName },
     ].forEach(p => {
       if (!pointMap.has(p.key)) {
-        pointMap.set(p.key, { ...p, count: 0, flights: [] });
+        pointMap.set(p.key, { ...p, code: p.key, count: 0, flights: [] });
       }
       const pt = pointMap.get(p.key);
       pt.count++;
@@ -335,9 +346,62 @@ function positionTooltip(event) {
   tooltip.style.top = top + 'px';
 }
 
+// ---- Minimal TopoJSON to GeoJSON converter ----
+function topojsonFeature(topology, object) {
+  const arcs = topology.arcs;
+  function decodeArc(arcIdx) {
+    const arc = arcs[arcIdx < 0 ? ~arcIdx : arcIdx];
+    const coords = [];
+    let x = 0, y = 0;
+    for (const pt of arc) {
+      x += pt[0];
+      y += pt[1];
+      coords.push([
+        x * topology.transform.scale[0] + topology.transform.translate[0],
+        y * topology.transform.scale[1] + topology.transform.translate[1],
+      ]);
+    }
+    if (arcIdx < 0) coords.reverse();
+    return coords;
+  }
+
+  function decodeRing(indices) {
+    const coords = [];
+    for (const idx of indices) {
+      const decoded = decodeArc(idx);
+      // Skip the first point of subsequent arcs to avoid duplicates
+      const start = coords.length > 0 ? 1 : 0;
+      for (let i = start; i < decoded.length; i++) {
+        coords.push(decoded[i]);
+      }
+    }
+    return coords;
+  }
+
+  function decodeGeometry(geom) {
+    if (geom.type === 'Polygon') {
+      return { type: 'Polygon', coordinates: geom.arcs.map(decodeRing) };
+    } else if (geom.type === 'MultiPolygon') {
+      return { type: 'MultiPolygon', coordinates: geom.arcs.map(poly => poly.map(decodeRing)) };
+    } else if (geom.type === 'GeometryCollection') {
+      return { type: 'GeometryCollection', geometries: geom.geometries.map(decodeGeometry) };
+    }
+    return geom;
+  }
+
+  const features = object.geometries.map(geom => ({
+    type: 'Feature',
+    properties: geom.properties || {},
+    geometry: decodeGeometry(geom),
+  }));
+
+  return { type: 'FeatureCollection', features };
+}
+
 // ---- Globe setup ----
 let globe;
 let allFlights = [];
+let rotationPaused = false; // User-toggled pause state
 
 async function init() {
   // Fetch CSV
@@ -350,14 +414,32 @@ async function init() {
   populateFilters(allFlights);
   renderFlightList(allFlights);
 
+  // Fetch country borders GeoJSON for polygon overlay
+  let countries = [];
+  try {
+    const topoResp = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const topoData = await topoResp.json();
+    // Convert TopoJSON to GeoJSON features
+    const topoFeature = topojsonFeature(topoData, topoData.objects.countries);
+    countries = topoFeature.features;
+  } catch (e) {
+    console.warn('Could not load country borders:', e);
+  }
+
   // Create globe — mount to DOM first, then configure
   globe = Globe()(document.getElementById('globe-container'))
-    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+    .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
     .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
     .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
     .showAtmosphere(true)
     .atmosphereColor('#4f8fff')
     .atmosphereAltitude(0.18)
+    // Country borders
+    .polygonsData(countries)
+    .polygonCapColor(() => 'rgba(0,0,0,0)')
+    .polygonSideColor(() => 'rgba(0,0,0,0)')
+    .polygonStrokeColor(() => 'rgba(0, 212, 255, 0.15)')
+    .polygonAltitude(0.001)
     // Arcs
     .arcsData(allFlights)
     .arcStartLat('startLat')
@@ -365,7 +447,14 @@ async function init() {
     .arcEndLat('endLat')
     .arcEndLng('endLng')
     .arcColor(d => [`${d.color}dd`, `${d.color}44`])
-    .arcAltitudeAutoScale(0.4)
+    .arcAltitude(d => {
+      // Fan out duplicate routes at different altitudes
+      const dist = Math.sqrt(
+        Math.pow(d.endLat - d.startLat, 2) + Math.pow(d.endLng - d.startLng, 2)
+      );
+      const baseAlt = dist * 0.4 / 90; // approximate auto-scale behavior
+      return Math.max(0.02, baseAlt + d.routeIndex * 0.04);
+    })
     .arcStroke(0.4)
     .arcDashLength(0.6)
     .arcDashGap(0.3)
@@ -378,21 +467,35 @@ async function init() {
         hideTooltip();
       }
     })
-    // Points
-    .pointsData(points)
-    .pointLat('lat')
-    .pointLng('lng')
-    .pointAltitude(d => Math.min(d.count * 0.003, 0.08))
-    .pointRadius(d => Math.max(0.15, Math.min(d.count * 0.04, 0.6)))
-    .pointColor(() => '#00d4ff')
-    .pointResolution(8)
-    .onPointHover((point) => {
-      if (point) {
+    // HTML airport markers instead of points
+    .htmlElementsData(points)
+    .htmlLat('lat')
+    .htmlLng('lng')
+    .htmlAltitude(0.005)
+    .htmlElement(d => {
+      const el = document.createElement('div');
+      el.className = 'airport-marker';
+      const size = Math.max(16, Math.min(d.count * 2, 40));
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+      el.innerHTML = `
+        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
+        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
+        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
+        <div class="airport-marker-dot"></div>
+      `;
+      // Store data reference for tooltip
+      el.dataset.code = d.code;
+      el.addEventListener('mouseenter', (e) => {
         document.body.style.cursor = 'pointer';
-      } else {
+        showPointTooltip(d, e);
+      });
+      el.addEventListener('mouseleave', () => {
         document.body.style.cursor = 'default';
         hideTooltip();
-      }
+      });
+      el.style.pointerEvents = 'auto';
+      return el;
     })
     // Labels for major airports
     .labelsData(points.filter(p => p.count >= 4))
@@ -400,10 +503,10 @@ async function init() {
     .labelLng('lng')
     .labelText('code')
     .labelSize(0.6)
-    .labelDotRadius(0.15)
+    .labelDotRadius(0)
     .labelColor(() => 'rgba(0, 212, 255, 0.75)')
     .labelResolution(2)
-    .labelAltitude(0.005);
+    .labelAltitude(0.008);
 
   // Renderer settings
   const renderer = globe.renderer();
@@ -430,35 +533,13 @@ async function init() {
   // Initial view — center on Asia
   globe.pointOfView({ lat: 30, lng: 110, altitude: 2.5 }, 0);
 
-  // Mouse move for tooltips on arcs/points (using raycasting through globe.gl)
-  document.getElementById('globe-container').addEventListener('mousemove', (e) => {
-    // Globe.gl handles hover internally, we just position the tooltip
-    const arcHover = globe.arcsData().find(d => d === globe.__onArcHover?.current);
-    // We use the onArcHover/onPointHover callbacks instead
-  });
-
-  // Custom hover handling via globe events
+  // Custom hover handling for arcs via globe events
   globe
     .onArcHover((arc) => {
       if (arc) {
         document.body.style.cursor = 'pointer';
-        // Show tooltip on next mousemove
         const handler = (e) => {
           showArcTooltip(arc, e);
-          document.removeEventListener('mousemove', handler);
-        };
-        document.addEventListener('mousemove', handler);
-        // Also show immediately with approximate position
-      } else {
-        document.body.style.cursor = 'default';
-        hideTooltip();
-      }
-    })
-    .onPointHover((point) => {
-      if (point) {
-        document.body.style.cursor = 'pointer';
-        const handler = (e) => {
-          showPointTooltip(point, e);
           document.removeEventListener('mousemove', handler);
         };
         document.addEventListener('mousemove', handler);
@@ -475,16 +556,31 @@ async function init() {
     }
   });
 
-  // Stop auto-rotate on interaction
+  // Stop auto-rotate on interaction (respect user pause)
   const container = document.getElementById('globe-container');
   container.addEventListener('mousedown', () => {
     controls.autoRotate = false;
   });
-  // Resume after 8 seconds idle
+  // Resume after 8 seconds idle — only if not user-paused
   let idleTimer;
   container.addEventListener('mouseup', () => {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { controls.autoRotate = true; }, 8000);
+    if (!rotationPaused) {
+      idleTimer = setTimeout(() => { controls.autoRotate = true; }, 8000);
+    }
+  });
+
+  // Pause/Resume rotation button
+  const rotBtn = document.getElementById('toggle-rotation');
+  const iconPause = rotBtn.querySelector('.icon-pause');
+  const iconPlay = rotBtn.querySelector('.icon-play');
+  rotBtn.addEventListener('click', () => {
+    rotationPaused = !rotationPaused;
+    controls.autoRotate = !rotationPaused;
+    clearTimeout(idleTimer);
+    iconPause.classList.toggle('hidden', rotationPaused);
+    iconPlay.classList.toggle('hidden', !rotationPaused);
+    rotBtn.title = rotationPaused ? 'Resume Rotation' : 'Pause Rotation';
   });
 
   // Fade out loader
@@ -525,10 +621,19 @@ function applyFilters() {
     filtered = filtered.filter(f => f.airline === airline);
   }
 
+  // Re-assign route indices for filtered set
+  const routeCounts = new Map();
+  filtered.forEach(f => {
+    const routeKey = [f.depCode, f.arrCode].sort().join('-');
+    const idx = routeCounts.get(routeKey) || 0;
+    f.routeIndex = idx;
+    routeCounts.set(routeKey, idx + 1);
+  });
+
   // Update globe
   globe.arcsData(filtered);
   const points = buildPoints(filtered);
-  globe.pointsData(points);
+  globe.htmlElementsData(points);
   globe.labelsData(points.filter(p => p.count >= 4));
 
   // Update list

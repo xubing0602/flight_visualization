@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Atlas — Personal Flight History</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-content">
+      <div class="loader-ring"></div>
+      <p class="loader-text">Mapping your journeys...</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header id="header">
+    <div class="header-left">
+      <h1 class="logo">FLIGHT <span>ATLAS</span></h1>
+      <p class="subtitle">Personal Flight History Visualization</p>
+    </div>
+    <div class="header-right">
+      <div class="stat-pill">
+        <span class="stat-label">Flights</span>
+        <span class="stat-value" id="stat-flights">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Airports</span>
+        <span class="stat-value" id="stat-airports">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Distance</span>
+        <span class="stat-value" id="stat-distance">—</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Airlines</span>
+        <span class="stat-value" id="stat-airlines">—</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Globe Container -->
+  <div id="globe-container"></div>
+
+  <!-- Tooltip -->
+  <div id="tooltip" class="tooltip hidden"></div>
+
+  <!-- Side Panel -->
+  <div id="side-panel" class="side-panel">
+    <div class="panel-header">
+      <h2>Flight Log</h2>
+      <div class="filter-group">
+        <select id="filter-year" class="filter-select">
+          <option value="all">All Years</option>
+        </select>
+        <select id="filter-airline" class="filter-select">
+          <option value="all">All Airlines</option>
+        </select>
+      </div>
+    </div>
+    <div id="flight-list" class="flight-list"></div>
+  </div>
+
+  <!-- Toggle Panel Button -->
+  <button id="toggle-panel" class="toggle-panel-btn" title="Toggle Flight Log">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
+
+  <!-- Controls hint -->
+  <div class="controls-hint">
+    <span>Drag to rotate</span>
+    <span>Scroll to zoom</span>
+    <span>Hover for details</span>
+  </div>
+
+  <script src="https://unpkg.com/globe.gl@2.35.1/dist/globe.gl.min.js"></script>
+  <script src="https://unpkg.com/d3-dsv@3.0.1/dist/d3-dsv.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

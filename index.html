@@ -91,6 +91,13 @@
         </div>
         <div class="metric-card">
           <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="metric-value" id="metric-avg-duration">—</div>
+          <div class="metric-label">Avg Flight Duration</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </div>
           <div class="metric-value" id="metric-longest">—</div>
@@ -169,6 +176,27 @@
             <span class="chart-badge">ROUTES</span>
           </div>
           <div class="chart-wrapper chart-tall"><canvas id="chart-routes"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Avg Duration by Airline</h3>
+            <span class="chart-badge">EFFICIENCY</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-airline-duration"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Flight Duration Distribution</h3>
+            <span class="chart-badge">HISTOGRAM</span>
+          </div>
+          <div class="chart-wrapper"><canvas id="chart-duration-dist"></canvas></div>
+        </div>
+        <div class="chart-card chart-wide">
+          <div class="chart-card-header">
+            <h3>Distance vs Duration</h3>
+            <span class="chart-badge">CORRELATION</span>
+          </div>
+          <div class="chart-wrapper"><canvas id="chart-distance-duration"></canvas></div>
         </div>
       </div>
     </div>

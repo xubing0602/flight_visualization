@@ -110,3 +110,19 @@ Three files, no framework:
 5. **Graceful Fallback** — If an image fails to load, the `onerror` handler swaps in a text badge with the airline's IATA code in its brand color.
 
 6. **Sidebar Repositioned** — Moved the flight log side panel from right to left edge of the screen. The panel toggle button is now at bottom-left, while analytics and rotation controls remain at bottom-right.
+
+### 2026-04-16 — Flight Duration Analytics
+
+1. **Calculate Flight Duration Script** — Added `calculate-flight-duration.py` that computes actual flight time accounting for timezone differences (using `timezonefinder` and Python's `zoneinfo`), DST transitions, and date rollovers (+1 or +2 days). Updates `itinierary.csv` in place with three new columns: `flight_duration` (human-readable), `flight_duration_hours`, and `flight_duration_minutes`.
+
+2. **Duration in Flight Log** — Each flight card now displays duration (e.g., "⏱ 3 hours 25 minutes") in cyan monospace font after the distance.
+
+3. **Duration in Tooltips** — Arc hover tooltips show flight duration alongside departure/arrival times.
+
+4. **New Analytics Metric** — Summary metrics row now includes "Avg Flight Duration" card showing average across all flights with duration data.
+
+5. **Avg Duration by Airline Chart** — Horizontal bar chart ranking airlines by average flight duration (shows which carriers you fly longer/shorter routes with).
+
+6. **Flight Duration Distribution Histogram** — Bar chart showing frequency distribution in 1-hour buckets (0-1h, 1-2h, ..., 15+h) to visualize typical flight lengths.
+
+7. **Distance vs Duration Scatter Plot** — Full-width scatter chart plotting distance (x-axis) vs actual flight time (y-axis). Reveals flight efficiency — points below the trend line are faster-than-average for their distance, useful for spotting direct vs connecting flights or tailwind effects.

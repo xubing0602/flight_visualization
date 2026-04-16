@@ -220,6 +220,9 @@ function parseCSV(text) {
       depTime: row.departure_time,
       arrTime: row.arrival_time,
       distance: row.distance,
+      duration: row.flight_duration || '',
+      durationHours: row.flight_duration_hours || '',
+      durationMinutes: row.flight_duration_minutes || '',
       startLat: dep.lat,
       startLng: dep.lng,
       endLat: arr.lat,
@@ -303,6 +306,7 @@ function renderFlightList(flights) {
           </span>
           <span class="flight-card-detail">${f.flightNo}</span>
           <span class="flight-card-detail">${f.distance}</span>
+          ${f.duration ? `<span class="flight-card-detail flight-card-duration">⏱ ${f.duration}</span>` : ''}
         </div>
       </div>
     `;
@@ -497,6 +501,10 @@ function showArcTooltip(flight, event) {
         <span class="tooltip-meta-label">Distance</span>
         <span class="tooltip-meta-value">${flight.distance}</span>
       </div>
+      ${flight.duration ? `<div class="tooltip-meta-item">
+        <span class="tooltip-meta-label">Duration</span>
+        <span class="tooltip-meta-value">${flight.duration}</span>
+      </div>` : ''}
       <div class="tooltip-meta-item">
         <span class="tooltip-meta-label">Departure</span>
         <span class="tooltip-meta-value">${flight.depTime}</span>

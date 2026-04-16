@@ -70,8 +70,24 @@
       }
     });
 
+    // Average flight duration
+    const flightsWithDuration = flights.filter(f => f.durationHours && f.durationMinutes);
+    let avgDurationText = '—';
+    if (flightsWithDuration.length > 0) {
+      const totalDurationHours = flightsWithDuration.reduce((sum, f) => {
+        const hours = parseFloat(f.durationHours) || 0;
+        const mins = parseFloat(f.durationMinutes) || 0;
+        return sum + hours + mins / 60;
+      }, 0);
+      const avgHours = totalDurationHours / flightsWithDuration.length;
+      const h = Math.floor(avgHours);
+      const m = Math.round((avgHours - h) * 60);
+      avgDurationText = `${h}h ${m}m`;
+    }
+
     document.getElementById('metric-earth-laps').textContent = laps + 'x';
     document.getElementById('metric-avg-dist').textContent = avgDist.toLocaleString() + ' km';
+    document.getElementById('metric-avg-duration').textContent = avgDurationText;
     document.getElementById('metric-longest').textContent = longestDist.toLocaleString() + ' km';
     document.getElementById('metric-busiest-year').textContent = busiestYear ? busiestYear[0] + ' (' + busiestYear[1] + ')' : '—';
     document.getElementById('metric-countries').textContent = regions.size;
@@ -487,6 +503,177 @@
           }
         }
       }));
+    }
+
+    // ---- Chart 9: Average Duration by Airline ----
+    {
+      const flightsWithDuration = flights.filter(f => f.durationHours && f.durationMinutes);
+      if (flightsWithDuration.length > 0) {
+        const airlineDurations = {};
+        flightsWithDuration.forEach(f => {
+          const hours = parseFloat(f.durationHours) || 0;
+          const mins = parseFloat(f.durationMinutes) || 0;
+          const totalHours = hours + mins / 60;
+          if (!airlineDurations[f.airline]) {
+            airlineDurations[f.airline] = { total: 0, count: 0 };
+          }
+          airlineDurations[f.airline].total += totalHours;
+          airlineDurations[f.airline].count++;
+        });
+
+        const sorted = Object.entries(airlineDurations)
+          .map(([airline, stats]) => ({ airline, avg: stats.total / stats.count }))
+          .sort((a, b) => b.avg - a.avg)
+          .slice(0, 12);
+
+        const labels = sorted.map(s => s.airline);
+        const data = sorted.map(s => s.avg);
+        const bgColors = labels.map(a => (AIRLINE_COLORS[a] || '#4f8fff') + '88');
+        const brColors = labels.map(a => AIRLINE_COLORS[a] || '#4f8fff');
+
+        const ctx = document.getElementById('chart-airline-duration').getContext('2d');
+        chartInstances.push(new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Avg Hours',
+              data,
+              backgroundColor: bgColors,
+              borderColor: brColors,
+              borderWidth: 1,
+              borderRadius: 3,
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const h = Math.floor(ctx.parsed.x);
+                    const m = Math.round((ctx.parsed.x - h) * 60);
+                    return `${h}h ${m}m`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Average Flight Duration (hours)' } },
+              y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            }
+          }
+        }));
+      }
+    }
+
+    // ---- Chart 10: Flight Duration Distribution (histogram) ----
+    {
+      const flightsWithDuration = flights.filter(f => f.durationHours && f.durationMinutes);
+      if (flightsWithDuration.length > 0) {
+        const durations = flightsWithDuration.map(f => {
+          const hours = parseFloat(f.durationHours) || 0;
+          const mins = parseFloat(f.durationMinutes) || 0;
+          return hours + mins / 60;
+        });
+
+        // Create histogram buckets (0-1h, 1-2h, 2-3h, ..., 15+h)
+        const buckets = Array.from({ length: 16 }, (_, i) => ({ min: i, max: i + 1, count: 0, label: i < 15 ? `${i}-${i+1}h` : '15+h' }));
+        durations.forEach(d => {
+          const idx = Math.min(Math.floor(d), 15);
+          buckets[idx].count++;
+        });
+
+        const labels = buckets.map(b => b.label);
+        const data = buckets.map(b => b.count);
+
+        const ctx = document.getElementById('chart-duration-dist').getContext('2d');
+        chartInstances.push(new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Flights',
+              data,
+              backgroundColor: PURPLE + '77',
+              borderColor: PURPLE,
+              borderWidth: 1,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { display: false }, title: { display: true, text: 'Flight Duration' } },
+              y: { grid: { color: 'rgba(255,255,255,0.04)' }, title: { display: true, text: 'Number of Flights' }, ticks: { stepSize: 5 } }
+            }
+          }
+        }));
+      }
+    }
+
+    // ---- Chart 11: Distance vs Duration (scatter) ----
+    {
+      const flightsWithDuration = flights.filter(f => f.durationHours && f.durationMinutes && f.distance);
+      if (flightsWithDuration.length > 0) {
+        const scatterData = flightsWithDuration.map(f => {
+          const hours = parseFloat(f.durationHours) || 0;
+          const mins = parseFloat(f.durationMinutes) || 0;
+          const totalHours = hours + mins / 60;
+          const distance = parseInt(f.distance) || 0;
+          return { x: distance, y: totalHours, label: `${f.flightNo} ${f.depCode}-${f.arrCode}` };
+        });
+
+        const ctx = document.getElementById('chart-distance-duration').getContext('2d');
+        chartInstances.push(new Chart(ctx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Flights',
+              data: scatterData,
+              backgroundColor: CYAN + '77',
+              borderColor: CYAN,
+              borderWidth: 1,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const point = scatterData[ctx.dataIndex];
+                    const h = Math.floor(point.y);
+                    const m = Math.round((point.y - h) * 60);
+                    return `${point.label}: ${point.x}km in ${h}h ${m}m`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                title: { display: true, text: 'Distance (km)' },
+                ticks: { callback: v => (v / 1000).toFixed(0) + 'k' }
+              },
+              y: {
+                grid: { color: 'rgba(255,255,255,0.04)' },
+                title: { display: true, text: 'Flight Duration (hours)' },
+                ticks: { callback: v => v.toFixed(1) + 'h' }
+              }
+            }
+          }
+        }));
+      }
     }
   }
 

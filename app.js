@@ -144,6 +144,46 @@ function getAirlineColor(airline) {
   return AIRLINE_COLORS[airline] || '#4f8fff';
 }
 
+// ---- Region Groupings ----
+const AIRLINE_REGIONS = {
+  'China': ['中国国航', '东方航空', '南方航空', '海南航空', '深圳航空', '厦门航空', '春秋航空', '吉祥航空', '山东航空', '上海航空', '国泰航空', '香港航空', '港龙航空'],
+  'Japan': ['日本航空', '全日空航空', '星悦航空'],
+  'South Korea': ['大韩航空', '韩亚航空'],
+  'Southeast Asia': ['新加坡航空', '泰国航空', '虎航'],
+  'South Asia': ['斯里兰卡航空', '印度航空', '捷特航空'],
+  'Middle East': ['卡塔尔航空', '沙特航空'],
+  'Europe': ['汉莎航空', '荷兰皇家航空', '维珍航空', '瑞士航空', '伊比利亚航空'],
+  'North America': ['美国联合', '美国航空', '达美航空', '西南航空', '阿拉斯加航空', '精神航空', '边疆航空', '加拿大航空'],
+  'Australia': ['澳洲航空'],
+};
+
+const AIRPORT_REGIONS = {
+  'China': ['PEK', 'PKX', 'PVG', 'SHA', 'SZX', 'CAN', 'HKG', 'MFM', 'DQA', 'HRB', 'DLC', 'TAO', 'TSN', 'XIY', 'CSX', 'FOC', 'JJN', 'NGB', 'HAK', 'HUZ'],
+  'Japan': ['HND', 'NRT', 'KIX', 'ITM', 'MYJ', 'NGO'],
+  'South Korea': ['ICN'],
+  'Southeast Asia': ['SIN', 'KUL', 'BKK', 'PNH'],
+  'South Asia': ['DEL', 'BOM', 'BLR', 'MAA', 'CMB'],
+  'Middle East': ['DOH', 'RUH', 'AMM', 'TLV'],
+  'Europe': ['LHR', 'CDG', 'FRA', 'MUC', 'ZRH', 'FCO', 'AMS', 'BCN', 'MAD', 'GRX', 'MAN'],
+  'North America': ['SFO', 'LAX', 'SJC', 'SEA', 'ORD', 'JFK', 'EWR', 'IAH', 'HOU', 'DFW', 'DAL', 'YYZ', 'MSP', 'LAS', 'SAN', 'OAK', 'BHM'],
+  'Australia': ['SYD', 'MEL', 'ADL', 'PER'],
+};
+
+// Build code→city lookup from AIRPORT_COORDS
+const CODE_TO_CITY = {};
+Object.values(AIRPORT_COORDS).forEach(a => {
+  if (!CODE_TO_CITY[a.code]) CODE_TO_CITY[a.code] = a.city;
+});
+
+// ---- Heat Color ----
+function getHeatColor(count, maxCount) {
+  const t = Math.pow(Math.min(count / Math.max(maxCount, 1), 1), 0.5);
+  const hue = 190 - t * 190; // 190 (cyan) → 0 (red)
+  const sat = 85 + t * 15;
+  const lum = 55 + t * 5;
+  return `hsl(${hue}, ${sat}%, ${lum}%)`;
+}
+
 // ---- Parse CSV ----
 function parseCSV(text) {
   const rows = d3.csvParse(text);
@@ -254,25 +294,154 @@ function renderFlightList(flights) {
   });
 }
 
+// ---- Multi-Select Filter System ----
+const filters = {};
+
+function createMultiSelect(container, id, label, options, grouped) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'multi-select';
+  wrapper.dataset.filter = id;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'multi-select-btn';
+  btn.innerHTML = `<span class="ms-label">${label}</span><span class="ms-chevron">▾</span>`;
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'multi-select-dropdown';
+
+  const actions = document.createElement('div');
+  actions.className = 'ms-actions';
+  actions.innerHTML = `
+    <button type="button" class="ms-action" data-action="all">Select All</button>
+    <button type="button" class="ms-action" data-action="clear">Clear All</button>
+  `;
+  dropdown.appendChild(actions);
+
+  const optionsDiv = document.createElement('div');
+  optionsDiv.className = 'ms-options';
+
+  if (grouped) {
+    for (const [group, items] of Object.entries(options)) {
+      const present = items.filter(i => i.present);
+      if (present.length === 0) continue;
+      const header = document.createElement('div');
+      header.className = 'ms-group-header';
+      header.textContent = group;
+      optionsDiv.appendChild(header);
+      present.forEach(item => {
+        const lbl = document.createElement('label');
+        lbl.className = 'ms-option';
+        lbl.innerHTML = `<input type="checkbox" value="${item.value}" checked><span>${item.label}</span>`;
+        optionsDiv.appendChild(lbl);
+      });
+    }
+  } else {
+    options.forEach(item => {
+      const lbl = document.createElement('label');
+      lbl.className = 'ms-option';
+      lbl.innerHTML = `<input type="checkbox" value="${item}" checked><span>${item}</span>`;
+      optionsDiv.appendChild(lbl);
+    });
+  }
+
+  dropdown.appendChild(optionsDiv);
+  wrapper.appendChild(btn);
+  wrapper.appendChild(dropdown);
+  container.appendChild(wrapper);
+
+  // Toggle dropdown
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = wrapper.classList.contains('open');
+    document.querySelectorAll('.multi-select.open').forEach(ms => ms.classList.remove('open'));
+    if (!isOpen) wrapper.classList.add('open');
+  });
+
+  // Prevent dropdown clicks from closing
+  dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+  // Actions
+  actions.querySelector('[data-action="all"]').addEventListener('click', () => {
+    optionsDiv.querySelectorAll('input').forEach(cb => { cb.checked = true; });
+    updateLabel();
+    applyFilters();
+  });
+  actions.querySelector('[data-action="clear"]').addEventListener('click', () => {
+    optionsDiv.querySelectorAll('input').forEach(cb => { cb.checked = false; });
+    updateLabel();
+    applyFilters();
+  });
+
+  // Checkbox changes
+  optionsDiv.addEventListener('change', () => {
+    updateLabel();
+    applyFilters();
+  });
+
+  function updateLabel() {
+    const all = optionsDiv.querySelectorAll('input');
+    const checked = optionsDiv.querySelectorAll('input:checked');
+    const labelEl = btn.querySelector('.ms-label');
+    if (checked.length === 0) {
+      labelEl.textContent = 'None';
+    } else if (checked.length === all.length) {
+      labelEl.textContent = label;
+    } else if (checked.length <= 2) {
+      labelEl.textContent = Array.from(checked).map(c => c.value).join(', ');
+    } else {
+      labelEl.textContent = `${checked.length} selected`;
+    }
+  }
+
+  const handle = {
+    getSelected() {
+      return Array.from(optionsDiv.querySelectorAll('input:checked')).map(c => c.value);
+    },
+    isAllSelected() {
+      return optionsDiv.querySelectorAll('input').length === optionsDiv.querySelectorAll('input:checked').length;
+    },
+  };
+
+  filters[id] = handle;
+  return handle;
+}
+
+// Close all dropdowns on click outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.multi-select.open').forEach(ms => ms.classList.remove('open'));
+});
+
 function populateFilters(flights) {
+  const container = document.getElementById('filter-group');
+  container.innerHTML = '';
+
+  // Year filter (simple list, newest first)
   const years = [...new Set(flights.map(f => f.date.split('/')[0]))].sort((a, b) => b - a);
-  const airlines = [...new Set(flights.map(f => f.airline))].sort();
+  createMultiSelect(container, 'year', 'All Years', years, false);
 
-  const yearSelect = document.getElementById('filter-year');
-  years.forEach(y => {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    yearSelect.appendChild(opt);
-  });
+  // Airline filter (grouped by region)
+  const presentAirlines = new Set(flights.map(f => f.airline));
+  const airlineOptions = {};
+  for (const [region, list] of Object.entries(AIRLINE_REGIONS)) {
+    airlineOptions[region] = list
+      .filter(a => presentAirlines.has(a))
+      .sort()
+      .map(a => ({ value: a, label: a, present: true }));
+  }
+  createMultiSelect(container, 'airline', 'All Airlines', airlineOptions, true);
 
-  const airlineSelect = document.getElementById('filter-airline');
-  airlines.forEach(a => {
-    const opt = document.createElement('option');
-    opt.value = a;
-    opt.textContent = a;
-    airlineSelect.appendChild(opt);
-  });
+  // Airport filter (grouped by region)
+  const presentAirports = new Set();
+  flights.forEach(f => { presentAirports.add(f.depCode); presentAirports.add(f.arrCode); });
+  const airportOptions = {};
+  for (const [region, codes] of Object.entries(AIRPORT_REGIONS)) {
+    airportOptions[region] = codes
+      .filter(c => presentAirports.has(c))
+      .sort()
+      .map(c => ({ value: c, label: `${c} — ${CODE_TO_CITY[c] || c}`, present: true }));
+  }
+  createMultiSelect(container, 'airport', 'All Airports', airportOptions, true);
 }
 
 // ---- Tooltip ----
@@ -398,6 +567,32 @@ function topojsonFeature(topology, object) {
   return { type: 'FeatureCollection', features };
 }
 
+// ---- Airport Marker Element ----
+function createMarkerElement(d, allPoints) {
+  const maxCount = Math.max(...allPoints.map(p => p.count));
+  const color = getHeatColor(d.count, maxCount);
+  const el = document.createElement('div');
+  el.className = 'airport-marker';
+  const size = Math.max(20, Math.min(d.count * 1.5 + 16, 48));
+  const dotSize = Math.max(5, Math.min(d.count * 0.4 + 4, 12));
+  el.style.width = size + 'px';
+  el.style.height = size + 'px';
+  el.innerHTML = `
+    <div class="marker-glow" style="background: radial-gradient(circle, ${color}55 0%, transparent 70%);"></div>
+    <div class="marker-dot" style="background: ${color}; color: ${color}; width: ${dotSize}px; height: ${dotSize}px;"></div>
+  `;
+  el.style.pointerEvents = 'auto';
+  el.addEventListener('mouseenter', (e) => {
+    document.body.style.cursor = 'pointer';
+    showPointTooltip(d, e);
+  });
+  el.addEventListener('mouseleave', () => {
+    document.body.style.cursor = 'default';
+    hideTooltip();
+  });
+  return el;
+}
+
 // ---- Globe setup ----
 let globe;
 let allFlights = [];
@@ -438,7 +633,7 @@ async function init() {
     .polygonsData(countries)
     .polygonCapColor(() => 'rgba(0,0,0,0)')
     .polygonSideColor(() => 'rgba(0,0,0,0)')
-    .polygonStrokeColor(() => 'rgba(0, 212, 255, 0.15)')
+    .polygonStrokeColor(() => 'rgba(0, 212, 255, 0.4)')
     .polygonAltitude(0.001)
     // Arcs
     .arcsData(allFlights)
@@ -467,46 +662,12 @@ async function init() {
         hideTooltip();
       }
     })
-    // HTML airport markers instead of points
+    // HTML airport markers — heat-colored, hoverable above arcs
     .htmlElementsData(points)
     .htmlLat('lat')
     .htmlLng('lng')
     .htmlAltitude(0.005)
-    .htmlElement(d => {
-      const el = document.createElement('div');
-      el.className = 'airport-marker';
-      const size = Math.max(16, Math.min(d.count * 2, 40));
-      el.style.width = size + 'px';
-      el.style.height = size + 'px';
-      el.innerHTML = `
-        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
-        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
-        <div class="airport-marker-ring" style="width:6px;height:6px;"></div>
-        <div class="airport-marker-dot"></div>
-      `;
-      // Store data reference for tooltip
-      el.dataset.code = d.code;
-      el.addEventListener('mouseenter', (e) => {
-        document.body.style.cursor = 'pointer';
-        showPointTooltip(d, e);
-      });
-      el.addEventListener('mouseleave', () => {
-        document.body.style.cursor = 'default';
-        hideTooltip();
-      });
-      el.style.pointerEvents = 'auto';
-      return el;
-    })
-    // Labels for major airports
-    .labelsData(points.filter(p => p.count >= 4))
-    .labelLat('lat')
-    .labelLng('lng')
-    .labelText('code')
-    .labelSize(0.6)
-    .labelDotRadius(0)
-    .labelColor(() => 'rgba(0, 212, 255, 0.75)')
-    .labelResolution(2)
-    .labelAltitude(0.008);
+    .htmlElement(d => createMarkerElement(d, points));
 
   // Renderer settings
   const renderer = globe.renderer();
@@ -606,19 +767,27 @@ toggleBtn.addEventListener('click', () => {
 });
 
 // ---- Filters ----
-document.getElementById('filter-year').addEventListener('change', applyFilters);
-document.getElementById('filter-airline').addEventListener('change', applyFilters);
-
 function applyFilters() {
-  const year = document.getElementById('filter-year').value;
-  const airline = document.getElementById('filter-airline').value;
+  if (!filters.year || !filters.airline || !filters.airport) return;
 
   let filtered = allFlights;
-  if (year !== 'all') {
-    filtered = filtered.filter(f => f.date.startsWith(year));
+
+  // Year filter
+  if (!filters.year.isAllSelected()) {
+    const selectedYears = new Set(filters.year.getSelected());
+    filtered = filtered.filter(f => selectedYears.has(f.date.split('/')[0]));
   }
-  if (airline !== 'all') {
-    filtered = filtered.filter(f => f.airline === airline);
+
+  // Airline filter
+  if (!filters.airline.isAllSelected()) {
+    const selectedAirlines = new Set(filters.airline.getSelected());
+    filtered = filtered.filter(f => selectedAirlines.has(f.airline));
+  }
+
+  // Airport filter
+  if (!filters.airport.isAllSelected()) {
+    const selectedAirports = new Set(filters.airport.getSelected());
+    filtered = filtered.filter(f => selectedAirports.has(f.depCode) || selectedAirports.has(f.arrCode));
   }
 
   // Re-assign route indices for filtered set
@@ -634,7 +803,6 @@ function applyFilters() {
   globe.arcsData(filtered);
   const points = buildPoints(filtered);
   globe.htmlElementsData(points);
-  globe.labelsData(points.filter(p => p.count >= 4));
 
   // Update list
   renderFlightList(filtered);

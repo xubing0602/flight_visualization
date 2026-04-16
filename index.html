@@ -52,22 +52,138 @@
   <div id="side-panel" class="side-panel">
     <div class="panel-header">
       <h2>Flight Log</h2>
-      <div class="filter-group">
-        <select id="filter-year" class="filter-select">
-          <option value="all">All Years</option>
-        </select>
-        <select id="filter-airline" class="filter-select">
-          <option value="all">All Airlines</option>
-        </select>
-      </div>
+      <div class="filter-group" id="filter-group"></div>
     </div>
     <div id="flight-list" class="flight-list"></div>
+  </div>
+
+  <!-- Analytics Overlay -->
+  <div id="analytics-overlay" class="analytics-overlay hidden">
+    <div class="analytics-container">
+      <div class="analytics-header">
+        <div>
+          <h2 class="analytics-title">FLIGHT <span>ANALYTICS</span></h2>
+          <p class="analytics-subtitle">Data-driven insights from your journey history</p>
+        </div>
+        <button id="close-analytics" class="analytics-close-btn" title="Close Analytics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Summary Metrics Row -->
+      <div class="analytics-metrics">
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+          </div>
+          <div class="metric-value" id="metric-earth-laps">—</div>
+          <div class="metric-label">Earth Circumnavigations</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="metric-value" id="metric-avg-dist">—</div>
+          <div class="metric-label">Avg Flight Distance</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="metric-value" id="metric-longest">—</div>
+          <div class="metric-label">Longest Flight</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <div class="metric-value" id="metric-busiest-year">—</div>
+          <div class="metric-label">Busiest Year</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </div>
+          <div class="metric-value" id="metric-countries">—</div>
+          <div class="metric-label">Regions Covered</div>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="analytics-grid">
+        <div class="chart-card chart-wide">
+          <div class="chart-card-header">
+            <h3>Flights & Distance by Year</h3>
+            <span class="chart-badge">TIMELINE</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-yearly"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top Airports</h3>
+            <span class="chart-badge">FREQUENCY</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-airports"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Region Distribution</h3>
+            <span class="chart-badge">GEOGRAPHY</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-regions"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top Airlines by Flights</h3>
+            <span class="chart-badge">CARRIERS</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-airlines-flights"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top Airlines by Distance</h3>
+            <span class="chart-badge">DISTANCE</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-airlines-distance"></canvas></div>
+        </div>
+        <div class="chart-card chart-wide">
+          <div class="chart-card-header">
+            <h3>Monthly Flight Pattern</h3>
+            <span class="chart-badge">SEASONALITY</span>
+          </div>
+          <div class="chart-wrapper"><canvas id="chart-monthly"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Day of Week Distribution</h3>
+            <span class="chart-badge">PATTERN</span>
+          </div>
+          <div class="chart-wrapper"><canvas id="chart-weekday"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h3>Top Routes</h3>
+            <span class="chart-badge">ROUTES</span>
+          </div>
+          <div class="chart-wrapper chart-tall"><canvas id="chart-routes"></canvas></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Toggle Panel Button -->
   <button id="toggle-panel" class="toggle-panel-btn" title="Toggle Flight Log">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
+
+  <!-- Analytics Button -->
+  <button id="toggle-analytics" class="toggle-analytics-btn" title="Flight Analytics">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 20V10M12 20V4M6 20v-6"/>
     </svg>
   </button>
 
@@ -91,6 +207,8 @@
 
   <script src="https://unpkg.com/globe.gl@2.35.1/dist/globe.gl.min.js"></script>
   <script src="https://unpkg.com/d3-dsv@3.0.1/dist/d3-dsv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
+  <script src="analytics.js"></script>
 </body>
 </html>

@@ -296,7 +296,7 @@ html, body {
 /* ---- Side Panel ---- */
 .side-panel {
   position: fixed;
-  right: 0;
+  left: 0;
   top: 0;
   bottom: 0;
   width: 360px;
@@ -304,10 +304,10 @@ html, body {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-left: 1px solid var(--border-glass);
+  border-right: 1px solid var(--border-glass);
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   transition: transform var(--transition);
   overflow: visible;
 }
@@ -385,7 +385,7 @@ html, body {
 .multi-select-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  right: 0;
+  left: 0;
   min-width: 220px;
   z-index: 400;
   background: var(--bg-secondary);
@@ -396,9 +396,9 @@ html, body {
   display: none;
 }
 
-.multi-select:first-child .multi-select-dropdown {
-  right: auto;
-  left: 0;
+.multi-select:last-child .multi-select-dropdown {
+  left: auto;
+  right: 0;
 }
 
 .multi-select.open .multi-select-dropdown {
@@ -610,7 +610,7 @@ html, body {
 /* ---- Toggle Panel Button ---- */
 .toggle-panel-btn {
   position: fixed;
-  right: 20px;
+  left: 20px;
   bottom: 20px;
   z-index: 300;
   width: 44px;
@@ -702,7 +702,7 @@ html, body {
 /* ---- Pause/Resume Rotation Button ---- */
 .toggle-rotation-btn {
   position: fixed;
-  right: 72px;
+  left: 72px;
   bottom: 20px;
   z-index: 300;
   width: 44px;
@@ -761,7 +761,7 @@ html, body {
 /* Analytics Toggle Button */
 .toggle-analytics-btn {
   position: fixed;
-  right: 124px;
+  left: 124px;
   bottom: 20px;
   z-index: 300;
   width: 44px;

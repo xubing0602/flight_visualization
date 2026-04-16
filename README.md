@@ -108,3 +108,5 @@ Three files, no framework:
 4. **`download-logos.sh`** — Reproducible download script that maps each IATA code to its canonical airline domain and fetches a 200px PNG from logo.dev. Idempotent: re-running skips already-downloaded files. Token can be overridden via `LOGO_DEV_TOKEN` env var.
 
 5. **Graceful Fallback** — If an image fails to load, the `onerror` handler swaps in a text badge with the airline's IATA code in its brand color.
+
+6. **Sidebar Repositioned** — Moved the flight log side panel from right to left edge of the screen. The panel toggle button is now at bottom-left, while analytics and rotation controls remain at bottom-right.

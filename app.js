@@ -144,6 +144,19 @@ function getAirlineColor(airline) {
   return AIRLINE_COLORS[airline] || '#4f8fff';
 }
 
+// ---- Airline IATA extraction (from flight number) ----
+function getAirlineIATA(flightNo) {
+  if (!flightNo) return '';
+  const m = flightNo.match(/^([A-Z0-9]{2})/i);
+  return m ? m[1].toUpperCase() : '';
+}
+
+function getAirlineLogoUrl(flightNo) {
+  const iata = getAirlineIATA(flightNo);
+  if (!iata) return '';
+  return `logos/${iata}.webp`;
+}
+
 // ---- Region Groupings ----
 const AIRLINE_REGIONS = {
   'China': ['中国国航', '东方航空', '南方航空', '海南航空', '深圳航空', '厦门航空', '春秋航空', '吉祥航空', '山东航空', '上海航空', '国泰航空', '香港航空', '港龙航空'],
@@ -273,18 +286,24 @@ function renderFlightList(flights) {
   flights.forEach(f => {
     const card = document.createElement('div');
     card.className = 'flight-card';
+    const logoUrl = getAirlineLogoUrl(f.flightNo);
     card.innerHTML = `
-      <div class="flight-card-header">
-        <span class="flight-card-route">${f.depCode} → ${f.arrCode}</span>
-        <span class="flight-card-date">${f.date}</span>
+      <div class="flight-card-logo" style="background:${f.color}15; border-color:${f.color}44;">
+        ${logoUrl ? `<img src="${logoUrl}" alt="${f.airline}" onerror="this.style.display='none'; this.parentElement.classList.add('no-logo'); this.parentElement.innerHTML='<span class=\\'logo-fallback\\' style=\\'color:${f.color}\\'>${getAirlineIATA(f.flightNo)}</span>';" />` : `<span class="logo-fallback" style="color:${f.color}">${getAirlineIATA(f.flightNo)}</span>`}
       </div>
-      <div class="flight-card-details">
-        <span class="flight-card-detail">
-          <span class="flight-card-dot" style="background:${f.color}"></span>
-          ${f.airline}
-        </span>
-        <span class="flight-card-detail">${f.flightNo}</span>
-        <span class="flight-card-detail">${f.distance}</span>
+      <div class="flight-card-body">
+        <div class="flight-card-header">
+          <span class="flight-card-route">${f.depCode} → ${f.arrCode}</span>
+          <span class="flight-card-date">${f.date}</span>
+        </div>
+        <div class="flight-card-details">
+          <span class="flight-card-detail">
+            <span class="flight-card-dot" style="background:${f.color}"></span>
+            ${f.airline}
+          </span>
+          <span class="flight-card-detail">${f.flightNo}</span>
+          <span class="flight-card-detail">${f.distance}</span>
+        </div>
       </div>
     `;
     card.addEventListener('mouseenter', () => {
@@ -448,11 +467,18 @@ function populateFilters(flights) {
 const tooltip = document.getElementById('tooltip');
 
 function showArcTooltip(flight, event) {
+  const logoUrl = getAirlineLogoUrl(flight.flightNo);
+  const iata = getAirlineIATA(flight.flightNo);
   tooltip.innerHTML = `
-    <div class="tooltip-route">
-      <span class="tooltip-city">${flight.depCity}</span>
-      <span class="tooltip-arrow">→</span>
-      <span class="tooltip-city">${flight.arrCity}</span>
+    <div class="tooltip-header">
+      <div class="tooltip-logo" style="background:${flight.color}18; border-color:${flight.color}55;">
+        ${logoUrl ? `<img src="${logoUrl}" alt="${flight.airline}" onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\\'logo-fallback\\' style=\\'color:${flight.color}\\'>${iata}</span>';" />` : `<span class="logo-fallback" style="color:${flight.color}">${iata}</span>`}
+      </div>
+      <div class="tooltip-route">
+        <span class="tooltip-city">${flight.depCity}</span>
+        <span class="tooltip-arrow">→</span>
+        <span class="tooltip-city">${flight.arrCity}</span>
+      </div>
     </div>
     <div class="tooltip-meta">
       <div class="tooltip-meta-item">

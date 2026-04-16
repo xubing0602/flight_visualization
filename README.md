@@ -96,3 +96,15 @@ Three files, no framework:
 10. **Top Routes** (horizontal bar) — Most frequently flown city-pair routes with a cyan-to-blue gradient.
 
 11. **New dependency** — Added `chart.js@4.4.7` via CDN for all chart rendering. New file `analytics.js` contains all dashboard logic.
+
+### 2026-04-16 — Airline Logos
+
+1. **Airline Logos in Flight Log** — Each flight card now displays the airline's logo in a rounded tinted container on the left. The IATA code is parsed from the flight number (e.g. `JL25` → `JL`), and the logo is loaded from `logos/<IATA>.png`.
+
+2. **Airline Logos in Tooltips** — Flight arc tooltips now show the airline logo next to the route, making airline identification instant on hover.
+
+3. **Local Logo Assets** — All 40 airline logos are stored locally in `logos/`, originally sourced from [logo.dev](https://logo.dev) keyed by official airline domain (e.g. `sda.cn` → Shandong Airlines `SC.png`). This eliminates runtime CDN dependency and avoids third-party logo APIs that require paid subscriptions.
+
+4. **`download-logos.sh`** — Reproducible download script that maps each IATA code to its canonical airline domain and fetches a 200px PNG from logo.dev. Idempotent: re-running skips already-downloaded files. Token can be overridden via `LOGO_DEV_TOKEN` env var.
+
+5. **Graceful Fallback** — If an image fails to load, the `onerror` handler swaps in a text badge with the airline's IATA code in its brand color.

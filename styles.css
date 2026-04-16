@@ -191,11 +191,47 @@ html, body {
   transform: translateY(4px);
 }
 
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tooltip-logo {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+
+.tooltip-logo img {
+  max-width: 82%;
+  max-height: 82%;
+  object-fit: contain;
+  display: block;
+}
+
+.tooltip-logo .logo-fallback {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
 .tooltip-route {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .tooltip-city {
@@ -484,17 +520,52 @@ html, body {
 }
 
 .flight-card {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   transition: all var(--transition);
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .flight-card:hover {
   background: rgba(255,255,255,0.03);
   border-color: var(--border-subtle);
+}
+
+.flight-card-logo {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+}
+
+.flight-card-logo img {
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  display: block;
+}
+
+.flight-card-logo .logo-fallback {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.flight-card-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .flight-card-header {

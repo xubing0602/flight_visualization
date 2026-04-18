@@ -156,6 +156,7 @@ html, body {
   font-weight: 600;
   color: var(--text-primary);
   margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* ---- Globe ---- */
@@ -693,12 +694,17 @@ html, body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInCentered {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
 #header {
   animation: fadeIn 0.8s ease 0.5s both;
 }
 
 .controls-hint {
-  animation: fadeIn 0.8s ease 1.2s both;
+  animation: fadeInCentered 0.8s ease 1.2s both;
 }
 
 .toggle-panel-btn {

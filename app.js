@@ -266,6 +266,24 @@ function buildPoints(flights) {
   return Array.from(pointMap.values());
 }
 
+function getFlightDurationMinutes(flight) {
+  const hours = parseInt(flight.durationHours, 10);
+  const minutes = parseInt(flight.durationMinutes, 10);
+
+  if (!Number.isNaN(hours) || !Number.isNaN(minutes)) {
+    return (Number.isNaN(hours) ? 0 : hours * 60) + (Number.isNaN(minutes) ? 0 : minutes);
+  }
+
+  // Backward-compatible fallback for values like "3 hours 05 minutes"
+  const text = (flight.duration || '').toLowerCase();
+  const m = text.match(/(\d+)\s*hours?\s*(\d+)\s*minutes?/);
+  if (m) {
+    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  }
+
+  return null;
+}
+
 // ---- Stats ----
 function updateStats(flights) {
   const airports = new Set();
@@ -274,11 +292,18 @@ function updateStats(flights) {
     const d = parseInt(f.distance) || 0;
     return sum + d;
   }, 0);
+  const totalDurationMin = flights.reduce((sum, f) => {
+    const mins = getFlightDurationMinutes(f);
+    return mins === null ? sum : sum + mins;
+  }, 0);
+  const totalDurationHours = Math.floor(totalDurationMin / 60);
+  const totalDurationRemainMin = totalDurationMin % 60;
   const airlines = new Set(flights.map(f => f.airline));
 
   document.getElementById('stat-flights').textContent = flights.length;
   document.getElementById('stat-airports').textContent = airports.size;
-  document.getElementById('stat-distance').textContent = totalDist + ' km';
+  document.getElementById('stat-distance').textContent = totalDist.toLocaleString('en-US') + ' km';
+  document.getElementById('stat-duration').textContent = `${totalDurationHours} hr ${String(totalDurationRemainMin).padStart(2, '0')} min`;
   document.getElementById('stat-airlines').textContent = airlines.size;
 }
 

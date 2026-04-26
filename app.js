@@ -815,15 +815,47 @@ async function init() {
   });
 }
 
+// ---- Mobile helpers ----
+function isMobile() {
+  return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function setMobileOverlay(visible) {
+  const overlay = document.getElementById('mobileOverlay');
+  if (overlay) overlay.classList.toggle('active', visible);
+}
+
 // ---- Panel toggle ----
 const toggleBtn = document.getElementById('toggle-panel');
 const sidePanel = document.getElementById('side-panel');
 let panelOpen = false;
 
 toggleBtn.addEventListener('click', () => {
-  panelOpen = !panelOpen;
-  sidePanel.classList.toggle('open', panelOpen);
+  if (isMobile()) {
+    if (sidePanel.classList.contains('mobile-open')) {
+      sidePanel.classList.remove('mobile-open');
+      setMobileOverlay(false);
+      panelOpen = false;
+    } else {
+      sidePanel.classList.add('mobile-open');
+      setMobileOverlay(true);
+      panelOpen = true;
+    }
+  } else {
+    panelOpen = !panelOpen;
+    sidePanel.classList.toggle('open', panelOpen);
+  }
 });
+
+// Mobile overlay tap: close panel
+const mobileOverlay = document.getElementById('mobileOverlay');
+if (mobileOverlay) {
+  mobileOverlay.addEventListener('click', () => {
+    sidePanel.classList.remove('mobile-open');
+    setMobileOverlay(false);
+    panelOpen = false;
+  });
+}
 
 // ---- Filters ----
 function applyFilters() {

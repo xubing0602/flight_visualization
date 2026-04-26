@@ -33,16 +33,16 @@
         <span class="stat-value" id="stat-airports">—</span>
       </div>
       <div class="stat-pill">
+        <span class="stat-label">Airlines</span>
+        <span class="stat-value" id="stat-airlines">—</span>
+      </div>
+      <div class="stat-pill">
         <span class="stat-label">Distance</span>
         <span class="stat-value" id="stat-distance">—</span>
       </div>
       <div class="stat-pill">
         <span class="stat-label">Flight Duration</span>
         <span class="stat-value" id="stat-duration">—</span>
-      </div>
-      <div class="stat-pill">
-        <span class="stat-label">Airlines</span>
-        <span class="stat-value" id="stat-airlines">—</span>
       </div>
     </div>
   </header>
@@ -55,6 +55,7 @@
 
   <!-- Side Panel -->
   <div id="side-panel" class="side-panel">
+    <div class="mobile-handle" aria-hidden="true"></div>
     <div class="panel-header">
       <h2>Flight Log</h2>
       <div class="filter-group" id="filter-group"></div>
@@ -238,6 +239,7 @@
     <span>Hover for details</span>
   </div>
 
+  <div id="mobileOverlay" aria-hidden="true"></div>
   <script src="https://unpkg.com/globe.gl@2.35.1/dist/globe.gl.min.js"></script>
   <script src="https://unpkg.com/d3-dsv@3.0.1/dist/d3-dsv.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>

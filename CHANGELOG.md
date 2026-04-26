@@ -88,3 +88,27 @@
 3. **Distance Thousand Separators** — Updated the `Distance` stat display to use thousand separators (e.g., `637,126 km`) for better readability.
 
 4. **Centered Controls Hint** — Fixed bottom `controls-hint` appearing slightly right-shifted by introducing a dedicated centered fade-in animation that preserves `translateX(-50%)`.
+
+### 2026-04-26 — Responsive Design Overhaul
+
+1. **Mobile Bottom-Sheet Flight Log** — On mobile (≤ 767px) the side panel becomes a full-height bottom sheet (`border-radius: 20px 20px 0 0`, `max-height: 80dvh`) that slides up from the bottom. It starts fully hidden (no peek) since the dedicated flight log button makes the entry point discoverable. The desktop left-slide behaviour (`translateX`) is overridden on mobile in favour of `translateY`. A semi-transparent backdrop overlay (`#mobileOverlay`, `z-index: 150`) appears behind the open panel; tapping it closes the panel.
+
+2. **3 FABs Aligned on One Row** — Flight log, pause/rotation, and analytics buttons are all pinned to `bottom: 20px` on mobile with `left: 20px / 76px / 132px` (56px spacing = button width + gap), guaranteeing they share the same baseline.
+
+3. **Header Stat Grid** — On mobile the five stat pills switch from a horizontal scroll strip to a `grid-template-columns: repeat(3, 1fr)` layout (2 rows of 3 + 2), so all stats are immediately visible without swiping. Pills use `min-width: 0` to prevent grid overflow, `white-space: normal` on values to allow wrapping, and reduced font sizes (`11px` value / `7px` label).
+
+4. **Compact Header Layout** — On mobile the header stacks vertically (`flex-direction: column`), the tagline subtitle is hidden, and the stat grid sits directly below the logo with `gap: 8px`. Padding reduced to `12px 16px`.
+
+5. **Tablet Breakpoint** — Added a `768px–1023px` tablet rule that narrows the side panel to `300px`. Analytics grid drops to single-column at `≤ 1023px` (previously `1024px`).
+
+6. **Analytics Mobile Layout** — Analytics overlay keeps full-screen treatment on mobile: 2-column metrics grid, single-column chart grid, `chart-wide` cards lose their span, smaller title and metric font sizes, tighter container padding (`20px 14px 60px`).
+
+7. **Touch Targets** — `.ms-option` (filter checkboxes) and `.flight-card` items enforce `min-height: 40px / 52px` on mobile for comfortable tapping.
+
+#### Files Modified
+
+| File | Change |
+|------|--------|
+| `styles.css` | Replaced single `768px` breakpoint with tablet (`768–1023px`) + mobile (`≤767px`) blocks; added `.mobile-handle`, `#mobileOverlay`, FAB alignment, stat grid, analytics mobile rules |
+| `app.js` | Added `isMobile()` / `setMobileOverlay()` helpers; mobile-aware panel toggle (uses `mobile-open` class + `translateY` instead of `open` + `translateX`); mobile overlay click listener |
+| `index.html` | Added `<div class="mobile-handle">` inside side panel; added `<div id="mobileOverlay">` before scripts |

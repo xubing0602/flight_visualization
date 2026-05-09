@@ -617,7 +617,114 @@
       }
     }
 
-    // ---- Chart 11: Distance vs Duration (scatter) ----
+    // ---- Chart 11: Top 10 Longest Flights (horizontal bar) ----
+    {
+      const withDist = flights.filter(f => parseInt(f.distance) > 0);
+      const longest10 = [...withDist].sort((a, b) => (parseInt(b.distance) || 0) - (parseInt(a.distance) || 0)).slice(0, 10);
+      const labels = longest10.map(f => `${f.depCode}→${f.arrCode} ${f.date}`);
+      const data = longest10.map(f => parseInt(f.distance) || 0);
+
+      const ctx = document.getElementById('chart-longest-flights').getContext('2d');
+      chartInstances.push(new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Distance (km)',
+            data,
+            backgroundColor: data.map((_, i) => {
+              const t = i / Math.max(data.length - 1, 1);
+              return `rgba(${Math.round(239 - t * 110)}, ${Math.round(68 + t * 116)}, ${Math.round(68 + t * 187)}, 0.7)`;
+            }),
+            borderColor: data.map((_, i) => {
+              const t = i / Math.max(data.length - 1, 1);
+              return `rgba(${Math.round(239 - t * 110)}, ${Math.round(68 + t * 116)}, ${Math.round(68 + t * 187)}, 1)`;
+            }),
+            borderWidth: 1,
+            borderRadius: 3,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const f = longest10[ctx.dataIndex];
+                  return `${ctx.parsed.x.toLocaleString()} km · ${f.airline} · ${f.flightNo}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              title: { display: true, text: 'Distance (km)' },
+              ticks: { callback: v => (v / 1000).toFixed(0) + 'k' }
+            },
+            y: { grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } }
+          }
+        }
+      }));
+    }
+
+    // ---- Chart 12: Top 10 Shortest Flights (horizontal bar) ----
+    {
+      const withDist = flights.filter(f => parseInt(f.distance) > 0);
+      const shortest10 = [...withDist].sort((a, b) => (parseInt(a.distance) || 0) - (parseInt(b.distance) || 0)).slice(0, 10);
+      const labels = shortest10.map(f => `${f.depCode}→${f.arrCode} ${f.date}`);
+      const data = shortest10.map(f => parseInt(f.distance) || 0);
+
+      const ctx = document.getElementById('chart-shortest-flights').getContext('2d');
+      chartInstances.push(new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Distance (km)',
+            data,
+            backgroundColor: data.map((_, i) => {
+              const t = i / Math.max(data.length - 1, 1);
+              return `rgba(${Math.round(16 + t * 0)}, ${Math.round(185 - t * 60)}, ${Math.round(129 - t * 50)}, 0.7)`;
+            }),
+            borderColor: data.map((_, i) => {
+              const t = i / Math.max(data.length - 1, 1);
+              return `rgba(${Math.round(16 + t * 0)}, ${Math.round(185 - t * 60)}, ${Math.round(129 - t * 50)}, 1)`;
+            }),
+            borderWidth: 1,
+            borderRadius: 3,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const f = shortest10[ctx.dataIndex];
+                  return `${ctx.parsed.x.toLocaleString()} km · ${f.airline} · ${f.flightNo}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              title: { display: true, text: 'Distance (km)' },
+            },
+            y: { grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } } }
+          }
+        }
+      }));
+    }
+
+    // ---- Chart 13: Distance vs Duration (scatter) ----
     {
       const flightsWithDuration = flights.filter(f => f.durationHours && f.durationMinutes && f.distance);
       if (flightsWithDuration.length > 0) {

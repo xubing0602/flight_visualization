@@ -1,4 +1,5 @@
 date,airlines,flight_no,departure_airport,departure_time,arrival_city,arrival_time,distance,flight_duration,flight_duration_hours,flight_duration_minutes
+2026/5/9,中国国航,CA1342,深圳宝安,17:00,北京首都,20:30,2077km,3 hr 30 min,3,30
 2026/5/2,东方航空,MU6279,北京大兴,15:00,深圳宝安,18:30,2077km,3 hr 30 min,3,30
 2026/4/9,日本航空,JL25,东京羽田,16:35,北京首都,19:45,2113km,4 hr 10 min,4,10
 2026/4/9,日本航空,JL116,大阪国际,12:40,东京羽田,13:55,403km,1 hr 15 min,1,15

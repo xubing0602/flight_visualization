@@ -617,6 +617,329 @@
       }
     }
 
+    // ---- Yearly Flight Heatmap (HTML, not Chart.js) ----
+    {
+      const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const DAYS_IN_MONTH = [31,29,31,30,31,30,31,31,30,31,30,31]; // 366-day leap calendar
+
+      // Aggregate flights by "MM-DD" across all years
+      const dayFlights = {};
+      flights.forEach(f => {
+        const parts = f.date.split('/');
+        if (parts.length < 3) return;
+        const key = `${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+        if (!dayFlights[key]) dayFlights[key] = [];
+        dayFlights[key].push(f);
+      });
+
+      const countValues = Object.values(dayFlights).map(a => a.length);
+      const maxCount = countValues.length > 0 ? Math.max(...countValues) : 1;
+      const flownDays = countValues.length;
+
+      function cellColor(count) {
+        if (count === 0) return 'rgba(255,255,255,0.06)';
+        const t = Math.pow(count / maxCount, 0.45);
+        return `rgba(0, 212, 255, ${(0.22 + t * 0.78).toFixed(2)})`;
+      }
+
+      const container = document.getElementById('heatmap-container');
+      container.innerHTML = '';
+
+      // Summary line
+      const summary = document.createElement('div');
+      summary.className = 'heatmap-summary';
+      summary.innerHTML = `
+        <span class="heatmap-stat-num">${flownDays}</span>
+        <span class="heatmap-stat-sep">/ 366</span>
+        <span class="heatmap-stat-text">calendar days have at least one flight</span>
+      `;
+      container.appendChild(summary);
+
+      // Grid: 1 label column + 31 day columns
+      const grid = document.createElement('div');
+      grid.className = 'heatmap-grid';
+
+      // Header row — day numbers
+      const blankLabel = document.createElement('div');
+      blankLabel.className = 'heatmap-month-label';
+      grid.appendChild(blankLabel);
+      for (let d = 1; d <= 31; d++) {
+        const hd = document.createElement('div');
+        hd.className = 'heatmap-day-num';
+        hd.textContent = [1,5,10,15,20,25,31].includes(d) ? d : '';
+        grid.appendChild(hd);
+      }
+
+      // Month rows
+      MONTHS.forEach((month, mIdx) => {
+        const label = document.createElement('div');
+        label.className = 'heatmap-month-label';
+        label.textContent = month;
+        grid.appendChild(label);
+
+        for (let d = 1; d <= 31; d++) {
+          const cell = document.createElement('div');
+          if (d > DAYS_IN_MONTH[mIdx]) {
+            cell.className = 'heatmap-cell heatmap-cell-void';
+          } else {
+            const key = `${String(mIdx + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const cellFlights = dayFlights[key] || [];
+            const count = cellFlights.length;
+            cell.className = 'heatmap-cell';
+            cell.style.backgroundColor = cellColor(count);
+            if (count > 0 && count / maxCount > 0.5) {
+              cell.style.boxShadow = `0 0 6px rgba(0,212,255,0.45)`;
+            }
+            const tooltipEl = document.getElementById('tooltip');
+            cell.addEventListener('mouseenter', e => {
+              const rows = cellFlights
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(f => `
+                  <div class="heatmap-tip-row">
+                    <span class="heatmap-tip-year">${f.date.split('/')[0]}</span>
+                    <span class="heatmap-tip-fn">${f.flightNo}</span>
+                    <span class="heatmap-tip-route">${f.depCode} → ${f.arrCode}</span>
+                  </div>`).join('');
+              tooltipEl.innerHTML = `
+                <div class="heatmap-tip-header">${month} ${d} · <strong>${count} flight${count !== 1 ? 's' : ''}</strong></div>
+                ${rows}`;
+              positionTooltip(e);
+              tooltipEl.classList.remove('hidden');
+            });
+            cell.addEventListener('mouseleave', () => tooltipEl.classList.add('hidden'));
+          }
+          grid.appendChild(cell);
+        }
+      });
+
+      container.appendChild(grid);
+
+      // Legend
+      const legend = document.createElement('div');
+      legend.className = 'heatmap-legend';
+      const legendCells = [0,1,2,3,4].map(l => {
+        const fakeCount = l === 0 ? 0 : Math.max(1, Math.round(maxCount * l / 4));
+        return `<div class="heatmap-legend-cell" style="background:${cellColor(fakeCount)}"></div>`;
+      }).join('');
+      legend.innerHTML = `<span class="heatmap-legend-label">Less</span>${legendCells}<span class="heatmap-legend-label">More</span>`;
+      container.appendChild(legend);
+    }
+
+    // ---- Top 10 Busiest Calendar Days (horizontal bar) ----
+    {
+      const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const dayCounts = {};
+      flights.forEach(f => {
+        const parts = f.date.split('/');
+        if (parts.length < 3) return;
+        const key = `${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+        dayCounts[key] = (dayCounts[key] || 0) + 1;
+      });
+
+      const sorted = Object.entries(dayCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      const labels = sorted.map(([key]) => {
+        const [m, d] = key.split('-');
+        return `${MONTHS_SHORT[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
+      });
+      const data = sorted.map(([, c]) => c);
+      const maxVal = Math.max(...data, 1);
+      const bgColors = data.map(c => {
+        const t = Math.pow(c / maxVal, 0.45);
+        return `rgba(0, 212, 255, ${(0.22 + t * 0.78).toFixed(2)})`;
+      });
+
+      const ctx = document.getElementById('chart-busiest-days').getContext('2d');
+      chartInstances.push(new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Flights',
+            data,
+            backgroundColor: bgColors,
+            borderColor: bgColors,
+            borderWidth: 1,
+            borderRadius: 3,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.x} flight${ctx.parsed.x !== 1 ? 's' : ''} (all years combined)`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              title: { display: true, text: 'Total flights across all years' },
+              ticks: { stepSize: 1 }
+            },
+            y: { grid: { display: false }, ticks: { font: { family: "'JetBrains Mono', monospace", size: 11 } } }
+          }
+        }
+      }));
+    }
+
+    // ---- Flight Days per Month (bar + coverage % line) ----
+    {
+      const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const DAYS_IN_MONTH = [31,29,31,30,31,30,31,31,30,31,30,31];
+
+      const daysSeen = Array.from({length: 12}, () => new Set());
+      flights.forEach(f => {
+        const parts = f.date.split('/');
+        if (parts.length < 3) return;
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        if (m >= 0 && m < 12) daysSeen[m].add(d);
+      });
+
+      const flightDays = daysSeen.map(s => s.size);
+      const coverage = flightDays.map((d, i) => parseFloat(((d / DAYS_IN_MONTH[i]) * 100).toFixed(1)));
+
+      const ctx = document.getElementById('chart-flight-days-month').getContext('2d');
+      chartInstances.push(new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: MONTHS_SHORT,
+          datasets: [
+            {
+              label: 'Days Flown',
+              data: flightDays,
+              backgroundColor: CYAN + '55',
+              borderColor: CYAN,
+              borderWidth: 1,
+              borderRadius: 4,
+              yAxisID: 'y',
+              order: 2,
+            },
+            {
+              label: 'Coverage %',
+              data: coverage,
+              type: 'line',
+              borderColor: GOLD,
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: GOLD,
+              pointBorderColor: '#0a0a0f',
+              pointBorderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y1',
+              order: 1,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: ctx => ctx.dataset.label === 'Coverage %'
+                  ? `Coverage: ${ctx.parsed.y}% of days`
+                  : `Days flown: ${ctx.parsed.y}`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              position: 'left',
+              title: { display: true, text: 'Unique Days Flown', color: CYAN },
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              min: 0,
+              ticks: { stepSize: 1 }
+            },
+            y1: {
+              position: 'right',
+              title: { display: true, text: 'Coverage %', color: GOLD },
+              grid: { display: false },
+              min: 0,
+              max: 100,
+              ticks: { callback: v => v + '%' }
+            }
+          }
+        }
+      }));
+    }
+
+    // ---- Day-of-Month Pattern (bars 1–31) ----
+    {
+      function ordinal(n) {
+        const s = ['th','st','nd','rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+      }
+
+      const domCounts = new Array(31).fill(0);
+      flights.forEach(f => {
+        const parts = f.date.split('/');
+        if (parts.length < 3) return;
+        const d = parseInt(parts[2], 10);
+        if (d >= 1 && d <= 31) domCounts[d - 1]++;
+      });
+
+      const labels = Array.from({length: 31}, (_, i) => i + 1);
+      const maxVal = Math.max(...domCounts, 1);
+
+      const ctx = document.getElementById('chart-dom-pattern').getContext('2d');
+      chartInstances.push(new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Flights',
+            data: domCounts,
+            backgroundColor: domCounts.map(c => {
+              const t = c / maxVal;
+              return `rgba(168, 85, 247, ${(0.25 + t * 0.7).toFixed(2)})`;
+            }),
+            borderColor: domCounts.map(c => {
+              const t = c / maxVal;
+              return `rgba(168, 85, 247, ${(0.5 + t * 0.5).toFixed(2)})`;
+            }),
+            borderWidth: 1,
+            borderRadius: 3,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => `${ctx.parsed.y} flight${ctx.parsed.y !== 1 ? 's' : ''} on the ${ordinal(ctx.label)} of the month`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              title: { display: true, text: 'Day of Month' }
+            },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              title: { display: true, text: 'Total Flights' },
+              ticks: { stepSize: 1 }
+            }
+          }
+        }
+      }));
+    }
+
     // ---- Chart 11: Top 10 Longest Flights (horizontal bar) ----
     {
       const withDist = flights.filter(f => parseInt(f.distance) > 0);

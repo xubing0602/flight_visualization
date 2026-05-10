@@ -174,7 +174,7 @@ html, body {
 /* ---- Tooltip ---- */
 .tooltip {
   position: fixed;
-  z-index: 500;
+  z-index: 1100;
   pointer-events: none;
   padding: 16px 20px;
   background: var(--glass-bg);
@@ -1100,6 +1100,139 @@ html, body {
 
 .chart-wrapper.chart-tall {
   height: 340px;
+}
+
+/* ---- Yearly Flight Heatmap ---- */
+.heatmap-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.heatmap-stat-num {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.heatmap-stat-sep {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.heatmap-stat-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: 28px repeat(31, 1fr);
+  gap: 3px;
+  width: 100%;
+}
+
+.heatmap-month-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 5px;
+  user-select: none;
+}
+
+.heatmap-day-num {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+  padding-bottom: 3px;
+  user-select: none;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  min-height: 10px;
+  border-radius: 3px;
+  cursor: default;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.4);
+  z-index: 2;
+  border-radius: 3px;
+}
+
+.heatmap-cell-void {
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
+.heatmap-legend-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin: 0 3px;
+}
+
+.heatmap-legend-cell {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+}
+
+.heatmap-tip-header {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.heatmap-tip-header strong {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.heatmap-tip-row {
+  display: grid;
+  grid-template-columns: 44px 64px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 11px;
+}
+
+.heatmap-tip-year {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.heatmap-tip-fn {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.heatmap-tip-route {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-weight: 500;
 }
 
 /* Responsive: Analytics — Tablet & below */

@@ -89,6 +89,67 @@
 
 4. **Centered Controls Hint** — Fixed bottom `controls-hint` appearing slightly right-shifted by introducing a dedicated centered fade-in animation that preserves `translateX(-50%)`.
 
+### 2026-05-10 — Heatmap Tooltip Fixes & Flight Detail
+
+1. **Instant Tooltip** — Replaced the native `title` attribute on heatmap cells with the existing custom `#tooltip` element driven by `mouseenter`/`mouseleave` listeners. Eliminates the browser-imposed ~500ms delay.
+
+2. **Z-Index Fix** — Bumped `.tooltip` z-index from 500 → 1100 so it renders above the analytics overlay (z-index 1000). Previously the tooltip was hidden behind the overlay and never visible.
+
+3. **Per-Flight Detail in Tooltip** — Heatmap cell aggregation changed from a plain count map to storing the full flight objects (`dayFlights`). Hovering a cell now shows a structured tooltip: a header with the date and total count, then one row per flight showing year (muted mono), flight number, and `DEP → ARR` route (cyan). Flights are sorted chronologically within the tooltip.
+
+#### Files Modified
+
+| File | Change |
+|------|--------|
+| `analytics.js` | `dayCounts` → `dayFlights` (stores flight arrays); `mouseenter` builds rich HTML tooltip with per-flight rows |
+| `styles.css` | Added `.heatmap-tip-header`, `.heatmap-tip-row`, `.heatmap-tip-year/fn/route` styles; tooltip z-index 500 → 1100 |
+
+### 2026-05-10 — Calendar Deep-Dive Charts
+
+1. **Top 10 Busiest Calendar Days** (horizontal bar) — Ranks the 10 most-flown calendar dates (e.g. "Mar 15") by total flights accumulated across all years. Bars use the same cyan intensity scale as the heatmap so visual weight is consistent. Tooltip shows the exact count with "all years combined" context.
+
+2. **Flight Days per Month** (bar + line combo) — For each of the 12 months, shows how many unique days of the month had at least one flight (cyan bars, left axis) alongside a gold coverage-% line (right axis, 0–100%). Reveals which months have sparse vs. dense flying spread across days, distinct from the radar chart which only shows total flight count.
+
+3. **Day-of-Month Pattern** (full-width bar, 31 bins) — Aggregates all flights by their day number (1st, 2nd, … 31st) regardless of month or year, using a purple intensity gradient. Answers "do I tend to fly at the start or end of the month?" Tooltip uses ordinal suffixes (1st, 2nd, 3rd, …).
+
+#### Files Modified
+
+| File | Change |
+|------|--------|
+| `index.html` | Added three chart cards: `chart-busiest-days` (half-width), `chart-flight-days-month` (half-width), `chart-dom-pattern` (full-width), inserted between the heatmap and longest-flights cards |
+| `analytics.js` | Added three chart sections before the longest-flights block; includes `ordinal()` helper for day-of-month tooltip labels |
+
+### 2026-05-10 — Daily Flight Heatmap
+
+1. **Yearly Flight Heatmap** — Added a GitHub-style calendar heatmap to the analytics dashboard. 366 cells arranged as a 12 × 31 grid (months × days), collapsing all years so the same calendar day accumulates across every year flown. Cells are colored on a cyan intensity scale (sqrt-normalized against the busiest day); days with zero flights show a near-black placeholder. Invalid calendar dates (e.g. Apr 31, Feb 30-31) render as transparent voids to maintain grid alignment.
+
+2. **Flight-Day Summary** — A summary line above the heatmap shows `X / 366 calendar days have at least one flight`, giving an immediate sense of flying frequency across the year.
+
+3. **Cell Interaction** — Hovering any cell scales it up (1.4×) for readability and shows a native tooltip with `Month Day: N flights`. High-intensity cells (> 50% of max) receive a subtle cyan glow.
+
+4. **Legend** — A 5-step "Less → More" legend below the grid shows the color ramp anchored to the actual busiest day.
+
+#### Files Modified
+
+| File | Change |
+|------|--------|
+| `index.html` | Added `chart-card chart-wide` block with `#heatmap-container` div |
+| `analytics.js` | Added heatmap section (plain HTML rendering, no Chart.js): aggregates counts by MM-DD, builds grid DOM, renders legend |
+| `styles.css` | Added `.heatmap-*` styles: grid layout, cell aspect-ratio, hover scale, legend, summary typography |
+
+### 2026-05-10 — Top 10 Longest & Shortest Flights
+
+1. **Top 10 Longest Flights** (horizontal bar) — Added to the analytics dashboard. Flights are ranked by distance descending; each bar label shows the route (`DEP→ARR date`) and the tooltip reveals exact distance, airline, and flight number. Bars use a red-to-purple gradient.
+
+2. **Top 10 Shortest Flights** (horizontal bar) — Same layout, sorted ascending. Bars use a green gradient. Useful for spotting regional hops vs. long-haul routes at a glance.
+
+#### Files Modified
+
+| File | Change |
+|------|--------|
+| `index.html` | Added two `chart-card` blocks (`chart-longest-flights`, `chart-shortest-flights`) to the analytics grid |
+| `analytics.js` | Added Charts 11 & 12 with distance-sorted slices, custom gradient colors, and tooltip callbacks |
+
 ### 2026-04-26 — Responsive Design Overhaul
 
 1. **Mobile Bottom-Sheet Flight Log** — On mobile (≤ 767px) the side panel becomes a full-height bottom sheet (`border-radius: 20px 20px 0 0`, `max-height: 80dvh`) that slides up from the bottom. It starts fully hidden (no peek) since the dedicated flight log button makes the entry point discoverable. The desktop left-slide behaviour (`translateX`) is overridden on mobile in favour of `translateY`. A semi-transparent backdrop overlay (`#mobileOverlay`, `z-index: 150`) appears behind the open panel; tapping it closes the panel.
